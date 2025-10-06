@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Movements</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="index.html">Inventory System</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="products.html">Products</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="locations.html">Locations</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="movements.html">Movements</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="report.html">Stock Report</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h2>Product Movement</h2>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5>Add New Movement</h5>
+            </div>
+            <div class="card-body">
+                <form id="movementForm">
+                    <div class="mb-3">
+                        <label for="productSelect" class="form-label">Product *</label>
+                        <select class="form-select" id="productSelect" required>
+                            <option value="">Select a product</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="fromLocation" class="form-label">From Location (leave blank for new stock)</label>
+                        <select class="form-select" id="fromLocation">
+                            <option value="">None (New Stock)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="toLocation" class="form-label">To Location (leave blank for outward movement)</label>
+                        <select class="form-select" id="toLocation">
+                            <option value="">None (Outward/Sold)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="quantity" class="form-label">Quantity *</label>
+                        <input type="number" class="form-control" id="quantity" min="1" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Movement</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>Movement History</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Product</th>
+                                <th>From Location</th>
+                                <th>To Location</th>
+                                <th>Quantity</th>
+                            </tr>
+                        </thead>
+                        <tbody id="movementTable">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="app.js"></script>
+    <script>
+        function loadDropdowns() {
+            const products = getProducts();
+            const locations = getLocations();
+            
+            const productSelect = document.getElementById('productSelect');
+            productSelect.innerHTML = '<option value="">Select a product</option>';
+            products.forEach(product => {
+                const option = document.createElement('option');
+                option.value = product.product_id;
+                option.textContent = product.name;
+                productSelect.appendChild(option);
+            });
+
+            const fromLocation = document.getElementById('fromLocation');
+            const toLocation = document.getElementById('toLocation');
+            
+            fromLocation.innerHTML = '<option value="">None (New Stock)</option>';
+            toLocation.innerHTML = '<option value="">None (Outward/Sold)</option>';
+            
+            locations.forEach(location => {
+                const option1 = document.createElement('option');
+                option1.value = location.location_id;
+                option1.textContent = location.name;
+                fromLocation.appendChild(option1);
+
+                const option2 = document.createElement('option');
+                option2.value = location.location_id;
+                option2.textContent = location.name;
+                toLocation.appendChild(option2);
+            });
+        }
+
+        function loadMovements() {
+            const movements = getMovements();
+            const products = getProducts();
+            const locations = getLocations();
+            const tbody = document.getElementById('movementTable');
+            tbody.innerHTML = '';
+
+            movements.reverse().forEach(movement => {
+                const product = products.find(p => p.product_id === movement.product_id);
+                const fromLoc = locations.find(l => l.location_id === movement.from_location);
+                const toLoc = locations.find(l => l.location_id === movement.to_location);
+
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${new Date(movement.timestamp).toLocaleString()}</td>
+                    <td>${product ? product.name : movement.product_id}</td>
+                    <td>${fromLoc ? fromLoc.name : '-'}</td>
+                    <td>${toLoc ? toLoc.name : '-'}</td>
+                    <td>${movement.qty}</td>
+                `;
+            });
+        }
+
+        document.getElementById('movementForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const movementData = {
+                movement_id: Date.now(),
+                timestamp: new Date().toISOString(),
+                product_id: document.getElementById('productSelect').value,
+                from_location: document.getElementById('fromLocation').value || null,
+                to_location: document.getElementById('toLocation').value || null,
+                qty: parseInt(document.getElementById('quantity').value)
+            };
+
+            addMovement(movementData);
+            this.reset();
+            loadMovements();
+        });
+
+        loadDropdowns();
+        loadMovements();
+    </script>
+</body>
+</html>
